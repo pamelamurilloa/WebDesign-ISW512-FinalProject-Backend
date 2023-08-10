@@ -8,6 +8,12 @@ router.get('/', function(req, res, next) {
 });
 
 
+//categories
+router.get('/categories', async function(req, res) {
+  const categories = await simpleQuery(`SELECT * FROM categories`)
+  res.send({ categories: categories.rows })
+})
+
 //all queryes related to posts
 
 router.post('/posts/insert-new', async function(req, res) {
@@ -25,9 +31,9 @@ router.post('/posts/insert-new', async function(req, res) {
   res.status(201).end();
 })
 
-router.get('/users/:id', async function(req, res) {
-  const users = await simpleQuery(`SELECT * FROM users WHERE id = ${req.params.id}`)
-  res.send({ user: users.rows[0] })
+router.get('/posts/:title', async function(req, res) {
+  const posts = await simpleQuery(`SELECT * FROM posts WHERE title = ${req.params.title}`)
+  res.send({ post: posts.rows[0] })
 })
 
 router.get('/posts/top-summary', async function(req, res) {
@@ -36,7 +42,7 @@ router.get('/posts/top-summary', async function(req, res) {
       SELECT p.* FROM ratings as r 
       JOIN posts as p 
       ON p.id = r.postid 
-      GROUP BY p.id 
+      WHERE p.category_id = ${req.query.category_id}
       ORDER BY AVG(rating) DESC 
       LIMIT 5
     `
@@ -45,7 +51,7 @@ router.get('/posts/top-summary', async function(req, res) {
 })
 
 router.get('/posts/all-summary', async function(req, res) {
-  const posts = await simpleQuery(`SELECT * FROM posts ORDER BY categoryid ASC`)
+  const posts = await simpleQuery(`SELECT * FROM posts WHERE category_id = ${req.query.category_id} ASC`)
   res.send({ posts: posts.rows })
 })
 
@@ -55,10 +61,18 @@ router.get('/posts/:id', async function(req, res) {
 })
 
 //mini section for ratings
-router.put('/posts/', async function(req, res) {
-  const {postid, userid, rating} = req.body;
-  const posts = await simpleQuery(`UPDATE ratings SET rating = ${rating} WHERE postid = ${postid} AND userid = ${userid}`)
-  res.send({ post: posts.rows[0] })
+router.post('/posts/confirm-rating', async function(req, res) {
+  const {postid, username, rating} = req.body;
+  var response = await simpleQuery(`SELECT u.id FROM ratings as r JOIN users as u ON u.id = r.userid WHERE postid = ${postid}  and username = '${username}' ;`)
+  
+  if (response.rowCount === 0) {
+    const userID = await simpleQuery(`SELECT id FROM users WHERE username = '${username}';`)
+    response = await simpleQuery(`INSERT INTO ratings (postid, userid, rating) VALUES (${postid}, ${userID.rows[0].id}, ${rating});`)
+    console.log("Rating inserted");
+  } else {
+    response = await simpleQuery(`UPDATE ratings SET rating = ${rating} WHERE postid = ${postid} AND userid = ${response.rows[0].id}`)
+    console.log("Rating updated");
+  }
 })
 
 //all querys related to users
@@ -70,16 +84,30 @@ router.post('/users/insert-new', async function(req, res) {
   res.status(201).end();
 })
 
-router.get('/users/password', async function(req, res) {
-  const username = req.body;
-  const password = await simpleQuery(`SELECT password FROM users WHERE username = '${username}';`)
-  res.send({ password: password.rows[0] })
+router.post('/users/login', async function(req, res) {
+  const {username, password} = req.body;
+  const response = await simpleQuery(`SELECT * FROM users WHERE username = '${username}' and password = '${password}';`)
+  console.log(response);
+  if (response.rowCount === 0) {
+    res.status(401).send({message:"Login invalid"});
+  } else {
+    res.end();
+  }
+})
+
+router.get('/users/search', async function(req, res) {
+  const username = req.query;
+  const userID = await simpleQuery(`SELECT id FROM users WHERE username = '${username}';`)
+  res.send({ userID: userID.rows[0] })
 })
 
 router.get('/users/:id', async function(req, res) {
   const users = await simpleQuery(`SELECT * FROM users WHERE id = ${req.params.id}`)
   res.send({ user: users.rows[0] })
 })
+
+
+
 
 //post ingresar
 
