@@ -48,7 +48,7 @@ router.get('/posts/top-summary', async function(req, res) {
 })
 
 router.get('/posts/all-summary', async function(req, res) {
-  const posts = await simpleQuery(`SELECT * FROM posts WHERE category_id = ${req.query.category_id}`)
+  const posts = await simpleQuery(`SELECT * FROM posts WHERE category_id = ${req.query.id}`)
   res.send({ posts: posts.rows })
 })
 
