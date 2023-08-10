@@ -31,10 +31,6 @@ router.post('/posts/insert-new', async function(req, res) {
   res.status(201).end();
 })
 
-router.get('/posts/:title', async function(req, res) {
-  const posts = await simpleQuery(`SELECT * FROM posts WHERE title = ${req.params.title}`)
-  res.send({ post: posts.rows[0] })
-})
 
 router.get('/posts/top-summary', async function(req, res) {
   const posts = await simpleQuery(
@@ -42,7 +38,8 @@ router.get('/posts/top-summary', async function(req, res) {
       SELECT p.* FROM ratings as r 
       JOIN posts as p 
       ON p.id = r.postid 
-      WHERE p.category_id = ${req.query.category_id}
+      WHERE p.category_id = ${req.query.id} 
+      GROUP BY p.id 
       ORDER BY AVG(rating) DESC 
       LIMIT 5
     `
@@ -51,14 +48,19 @@ router.get('/posts/top-summary', async function(req, res) {
 })
 
 router.get('/posts/all-summary', async function(req, res) {
-  const posts = await simpleQuery(`SELECT * FROM posts WHERE category_id = ${req.query.category_id} ASC`)
+  const posts = await simpleQuery(`SELECT * FROM posts WHERE category_id = ${req.query.category_id}`)
   res.send({ posts: posts.rows })
 })
 
-router.get('/posts/:id', async function(req, res) {
-  const posts = await simpleQuery(`SELECT * FROM posts WHERE id = ${req.params.id}`)
+router.get('/posts', async function(req, res) {
+  const posts = await simpleQuery(`SELECT * FROM posts WHERE id = ${req.query.id}`)
   res.send({ post: posts.rows[0] })
 })
+
+// router.get('/posts/:title', async function(req, res) {
+//   const posts = await simpleQuery(`SELECT * FROM posts WHERE title = '${req.params.title}'`)
+//   res.send({ post: posts.rows[0] })
+// })
 
 //mini section for ratings
 router.post('/posts/confirm-rating', async function(req, res) {
